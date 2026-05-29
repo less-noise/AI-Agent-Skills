@@ -1,159 +1,127 @@
-# M365 AI 插件
+# AI Skills 技能包
 
-集成 **DeepSeek AI API** 的 Microsoft 365 桌面插件，支持 **Word、Excel、PowerPoint**。所有代码在本地运行，无需云服务器。
+四个为 AI 助手设计的 Skill，覆盖简历求职、任务交接、学习导航和进度定位四种高频协作场景。每个 Skill 都包含完整的指令、参考示例和输出模板，直接放入 Cowork 的 skills 目录即可使用。
 
-## 功能
+## 技能概览
 
-| 应用           | 能力                                             |
-| -------------- | ------------------------------------------------ |
-| **Word**       | 学术润色、格式整理、语气调整、生成摘要、续写扩展 |
-| **Excel**      | 数据清洗建议、自然语言问答、趋势分析、公式生成   |
-| **PowerPoint** | 演讲大纲生成、幻灯片内容撰写、备注稿生成         |
+| Skill            | 中文名   | 一句话描述                                     |
+| ---------------- | -------- | ---------------------------------------------- |
+| resume-assistant | 简历助手 | 把零散经历转化为可投递的专业简历               |
+| task-handover    | 任务交接 | 生成标准化交接文档，让新会话无缝接手           |
+| wayfinder        | 指路人   | 在学习和探索中建立方向感，先指路再赶路         |
+| progress-locator | 定位仪   | 把模糊的"我在哪、还差多少"变成可量化的现状判断 |
 
-AI 响应以流式输出，结果可直接写入文档或复制到剪贴板。
+---
 
-## 架构
+## 1. 简历助手（resume-assistant）
 
-```
-你的电脑（本地）                          DeepSeek API（云端）
-┌────────────────────────────┐            ┌──────────────┐
-│ Office（Word/Excel/PPT）    │  fetch()   │  DeepSeek AI │
-│  侧边栏（Office.js）        │ ──────────►│  推理服务     │
-│                            │ ◄───────── │              │
-│ http-server :3000          │  流式返回   │              │
-│（本地 HTTPS，仅本机可访问）  │            └──────────────┘
-└────────────────────────────┘
-```
+把用户的零散经历——实习、项目、社团活动、工作履历——通过 STAR 追问、量化改写和身份策略，转化为可以直接投递的专业简历。支持应届生、有经验者和转行者三种身份策略，最终输出 PDF 或可打印 HTML。
 
-- **http-server** 在本地提供 HTTPS 静态文件服务，仅监听 `127.0.0.1`
-- **Office.js** 负责读写文档内容（选区、单元格、幻灯片）
-- **DeepSeek API** 处理所有 AI 推理，API Key 仅保存在你本地
+**核心流程：** 判断任务类型 → 收集基础信息 → 方向定位（如需）→ STAR 追问 → 经历改写 → 排版输出
 
-## 环境要求
+**包含资源：**
 
-- **Windows 10 / 11**
-- **Microsoft 365** 桌面版（Word、Excel、PowerPoint）
-- **Node.js** LTS → [下载](https://nodejs.org)
-- **DeepSeek API Key** → [申请](https://platform.deepseek.com/api_keys)
+- `references/resume-examples.md` — STAR 追问和改写示例
+- `assets/resume-template.html` — 单文件 A4 简历模板
+- `scripts/generate_resume.py` — JSON 转 HTML 渲染脚本
 
-## 安装（仅需一次）
+**适用场景：** 写简历、改简历、方向不清晰、需要 STAR 挖掘、生成 ATS 兼容的 PDF/HTML
 
-### 1. 克隆项目
+---
 
-```bash
-git clone https://github.com/你的用户名/office-ai-addin.git
-cd office-ai-addin
-```
+## 2. 任务交接（task-handover）
 
-### 2. 运行安装
+当上下文过长、额度将尽、需要切换会话，或者需要把工作交给人或另一个 AI 时，生成包含任务快照、目标、已完成内容、待办、关键约束和接班指令的标准化文档。目标是让接手方不看历史对话也能准确继续任务。
 
-双击 **install.bat**，脚本会自动：
+**八节结构：** 任务快照 → 最终目标 → 已完成内容 → 待完成内容 → 关键约束 → 已确认决策 → 上下文摘要 → 接班指令
 
-- 检查 Node.js 环境
-- 安装 npm 依赖
-- 生成并信任本地 HTTPS 证书（如有安全弹窗，请点"是"）
-- 注册插件清单到 Office
+**包含资源：**
 
-### 3. 填写 API Key
+- `references/examples.md` — 代码、写作、研究、规划四类任务的完整交接示例
 
-编辑 `config/config.json`：
+**适用场景：** 长任务续接、上下文压缩、跨会话协作、任务转交他人
 
-```json
-{
-  "apiKey": "sk-你的DeepSeek密钥",
-  "models": {
-    "word": "deepseek-v4-flash",
-    "excel": "deepseek-v4-flash",
-    "ppt": "deepseek-v4-pro"
-  },
-  "language": "zh-CN"
-}
-```
+---
 
-## 使用
+## 3. 指路人（wayfinder）
 
-1. 双击 **start.bat**
-2. 选择要打开的应用：`W`（Word）/ `E`（Excel）/ `P`（PPT）/ `A`（全部）
-3. Office 自动启动，侧边栏自动弹出
-4. **不要关闭服务器窗口**，使用完毕后关掉即可
+当用户缺乏全局视野时，不急着回答表面问题，而是先判断用户处于"道、法、器"三层中的哪一层。通过展开地图、锚定位置、解释意义、规划路径和预见场景五个工具，帮用户建立方向感后再深入执行。
 
-### Word
+**三层判断：** 道（方向与意义）→ 法（路径与方法）→ 器（工具与细节）
 
-在文档中选中文字 → 点击「获取选中文字」→ 选择功能（学术润色/格式整理/语气调整/生成摘要/续写扩展）→ 点击「开始处理」→ 结果流式输出 → 点击「替换原文」写回文档。
+**包含资源：**
 
-### Excel
+- `references/domain-maps.md` — 技术、人文社科、商业、创意、历史、技能六大领域的结构地图
 
-选中数据区域 → 选择功能（数据清洗/自然语言提问/数据趋势描述/生成公式）→ 输入问题或指令 → 点击「开始处理」。
+**适用场景：** 进入陌生学习领域、方向迷茫、碎片化认知、不知道学什么、在细节里迷失
 
-### PowerPoint
+---
 
-选择功能（生成演讲大纲/幻灯片文字内容/备注稿）→ 输入主题或内容 → 点击「开始生成」。
+## 4. 定位仪（progress-locator）
+
+把"我现在到哪了、还差多少、接下来做什么"这类模糊问题转化为清晰、量化、可行动的回答。从时间轴、深度和风险三个维度扫描当前状态，用阶段标记器、进度仪表盘、状态诊断仪、位置锚定器和下一步导航五个工具输出结构化判断。
+
+**四问扫描：** 位置 → 进度 → 状态 → 下一步
+
+**包含资源：**
+
+- `references/output-templates.md` — 五种工具和完整输出骨架的格式化模板
+
+**适用场景：** 项目中途卡壳、不确定进度、需要汇报状态、风险诊断、下一步行动不明
+
+---
 
 ## 目录结构
 
 ```
-office-ai-addin/
-├── install.bat              一次性安装
-├── start.bat                启动服务 + Office
-├── stop.bat                 停止服务
-├── package.json
-├── config/
-│   ├── config.json          你的 API Key（不提交）
-│   └── config.example.json  配置模板
-├── manifest/
-│   ├── manifest-word.xml
-│   ├── manifest-excel.xml
-│   └── manifest-ppt.xml
-├── shared/
-│   ├── api.js               DeepSeek API 调用（流式）
-│   ├── config-loader.js     配置加载
-│   └── style.css            共用 UI
-├── word/
-│   ├── taskpane.html
-│   └── taskpane.js
-├── excel/
-│   ├── taskpane.html
-│   └── taskpane.js
-├── ppt/
-│   ├── taskpane.html
-│   └── taskpane.js
-└── scripts/
-    └── generate-certs.js    证书生成（回退方案）
+skills/
+├── resume-assistant/
+│   ├── SKILL.md
+│   ├── scripts/
+│   │   └── generate_resume.py
+│   ├── references/
+│   │   └── resume-examples.md
+│   └── assets/
+│       └── resume-template.html
+├── task-handover/
+│   ├── SKILL.md
+│   ├── references/
+│   │   └── examples.md
+│   ├── scripts/       (占位)
+│   └── assets/        (占位)
+├── wayfinder/
+│   ├── SKILL.md
+│   ├── references/
+│   │   └── domain-maps.md
+│   ├── scripts/       (占位)
+│   └── assets/        (占位)
+├── progress-locator/
+│   ├── SKILL.md
+│   ├── references/
+│   │   └── output-templates.md
+│   ├── scripts/       (占位)
+│   └── assets/        (占位)
+├── LICENSE.txt
+└── README.md
 ```
 
-## 技术栈
+## 安装方式
 
-- Office Add-in 框架（Office.js / Task Pane）
-- 原生 HTML + CSS + JavaScript（无框架）
-- http-server 本地 HTTPS 服务
-- office-addin-dev-certs 证书管理
-- office-addin-debugging 插件注入
-- DeepSeek API（Anthropic 兼容端点，SSE 流式）
+1. 将整个仓库克隆或下载到本地
+2. 把四个 Skill 文件夹（`resume-assistant`、`task-handover`、`wayfinder`、`progress-locator`）放入 Cowork 的 skills 目录
+3. 重启或刷新 Cowork 后即可在对话中触发
 
-## 常见问题
+技能触发方式：在对话中描述你的需求，AI 会根据场景自动匹配对应的 Skill。例如说"帮我改一下简历"，AI 会加载简历助手；说"我现在卡住了不知道进度到哪了"，AI 会加载定位仪。
 
-**打开 Office 找不到插件？**
+## 设计理念
 
-确认 `start.bat` 窗口在运行，然后重启 Office。本插件通过调试工具注入，`start.bat` 会自动处理。
+四个 Skill 共同遵循的原则：
 
-**提示"Failed to fetch"？**
+- **先诊断，后操作** — 不在信息不足时直接给出成品，先充分了解上下文
+- **量化优先** — 进度、成果、风险尽量用数字表示，避免模糊描述
+- **可接班** — 所有输出都设计为可以被其他人或新会话继续使用
+- **结构化输出** — 每个 Skill 都有固定的输出框架，确保质量稳定
 
-确认 `start.bat` 窗口未关闭，端口 3000 未被防火墙阻止。
+## 许可
 
-**浏览器提示证书不安全？**
-
-以管理员身份重新运行 `install.bat`。
-
-**WPS 抢了 .docx 文件关联？**
-
-右键任意 `.docx` 文件 → 打开方式 → 选择 Microsoft Word → 始终使用此应用。
-
-## 安全
-
-- API Key 仅存储在本地 `config/config.json` 中，已加入 `.gitignore`
-- 所有 AI 请求从你电脑直连 DeepSeek，无数据中转
-- 本地 HTTPS 服务仅监听 `127.0.0.1`，外网无法访问
-
-## 许可证
-
-MIT
+MIT License
